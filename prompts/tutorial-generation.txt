@@ -1,0 +1,10 @@
+Create a comprehensive tutorial based on this video/audio content.
+
+Include:
+- Overview and learning objectives
+- Key topics and concepts with timestamps [hh:mm:ss]
+- Step-by-step explanations
+- Important takeaways
+- Suggested exercises or practice points
+
+Structure the tutorial clearly with sections and subsections.

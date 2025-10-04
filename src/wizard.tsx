@@ -229,7 +229,55 @@ export const Wizard: React.FC = () => {
       } else if (selectedOption === 'generateTutorial') {
         processResult = await generateTutorial(filePath, {
           onStatus: enqueueStatus,
+          onProgressChunk: enqueueTranscriptChunk,
+          signal,
         });
+
+        if (processResult.success && processResult.data) {
+          const base = isS3Url(filePath) ? 'tutorial' : basename(filePath, extname(filePath));
+          const outputPath = resolvePath(process.cwd(), `${base}.tutorial.md`);
+          let updatedResult: ProcessingResult = { ...processResult };
+
+          try {
+            writeFileSync(outputPath, processResult.data, 'utf8');
+            updatedResult = { ...updatedResult, artifactPath: outputPath };
+            if (isVerbose) {
+              setConsoleMessages(prev => [
+                ...prev.slice(-(MAX_CONSOLE_LINES - 1)),
+                `Saved tutorial → ${outputPath}`,
+              ]);
+            }
+          } catch (saveError) {
+            const message = saveError instanceof Error ? saveError.message : String(saveError);
+            if (isVerbose) {
+              setConsoleMessages(prev => [
+                ...prev.slice(-(MAX_CONSOLE_LINES - 1)),
+                `[ERROR] Failed to save tutorial: ${message}`,
+              ]);
+            } else {
+              enqueueStatus(`Failed to save tutorial: ${message}`);
+            }
+          }
+
+          if (isVerbose && isS3Url(filePath)) {
+            try {
+              const presignedUrl = await generatePresignedUrl(filePath);
+              updatedResult = { ...updatedResult, presignedUrl };
+              setConsoleMessages(prev => [
+                ...prev.slice(-(MAX_CONSOLE_LINES - 1)),
+                `[S3] Presigned URL (1h): ${presignedUrl}`,
+              ]);
+            } catch (s3Error) {
+              const message = s3Error instanceof Error ? s3Error.message : String(s3Error);
+              setConsoleMessages(prev => [
+                ...prev.slice(-(MAX_CONSOLE_LINES - 1)),
+                `[S3] Failed to generate presigned URL: ${message}`,
+              ]);
+            }
+          }
+
+          processResult = updatedResult;
+        }
       } else {
         throw new Error('Invalid operation type');
       }
@@ -353,13 +401,13 @@ export const Wizard: React.FC = () => {
           )}
         </Box>
         <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1} paddingY={0}>
-          <Text dimColor>Live transcript (last 3 lines):</Text>
+          <Text dimColor>Live output (last 3 lines):</Text>
           {transcriptState.lines.length > 0 ? (
             transcriptState.lines.map((line, index) => (
               <Text key={`line-${index}`}>{line}</Text>
             ))
           ) : (
-            <Text dimColor>Waiting for transcript...</Text>
+            <Text dimColor>Waiting for output...</Text>
           )}
         </Box>
         {isVerbose && consoleMessages.length > 0 && (
@@ -400,7 +448,7 @@ export const Wizard: React.FC = () => {
         <Text>{result.message}</Text>
         {result.artifactPath && (
           <Box marginTop={1}>
-            <Text dimColor>Saved transcript → {result.artifactPath}</Text>
+            <Text dimColor>Saved output → {result.artifactPath}</Text>
           </Box>
         )}
         {isVerbose && result.presignedUrl && (
@@ -415,7 +463,7 @@ export const Wizard: React.FC = () => {
         )}
         {previewLines && (
           <Box marginTop={1} flexDirection="column">
-            <Text dimColor>Transcript preview (first 3 lines):</Text>
+            <Text dimColor>Output preview (first 3 lines):</Text>
             {previewLines.map((line, index) => (
               <Text key={`preview-${index}`}>{line}</Text>
             ))}
@@ -441,7 +489,7 @@ export const Wizard: React.FC = () => {
         <Box marginTop={1}>
           <Text dimColor>
             Press Enter or M to return to menu
-            {result.data ? ' • Press O to preview transcript' : ''}
+            {result.data ? ' • Press O to preview output' : ''}
             • Press Q to exit
           </Text>
         </Box>

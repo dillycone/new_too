@@ -26,7 +26,8 @@
     "node": ">=18.17"
   },
   "files": [
-    "dist/**"
+    "dist/**",
+    "prompts/**"
   ],
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
