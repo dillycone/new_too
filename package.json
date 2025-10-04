@@ -1,0 +1,48 @@
+{
+  "name": "media-wizard",
+  "version": "1.0.0",
+  "description": "CLI wizard for transcribing and generating tutorials from audio/video files",
+  "main": "dist/index.js",
+  "bin": {
+    "media-wizard": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "build": "tsc",
+    "prepare": "npm run build",
+    "dev": "node scripts/start.mjs"
+  },
+  "keywords": [
+    "cli",
+    "wizard",
+    "transcribe",
+    "tutorial",
+    "ink"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "files": [
+    "dist/**"
+  ],
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.901.0",
+    "@aws-sdk/credential-providers": "^3.901.0",
+    "@aws-sdk/s3-request-presigner": "^3.901.0",
+    "@google/genai": "^1.22.0",
+    "dotenv": "^17.2.3",
+    "ink": "^4.4.1",
+    "ink-text-input": "^5.0.1",
+    "mime": "^4.1.0",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
