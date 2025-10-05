@@ -7,106 +7,10 @@ import { basename, join } from 'path';
 import { randomBytes } from 'crypto';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import type { S3Location } from './s3Url.js';
+import { parseS3Url as parseS3UrlLite } from './s3Url.js';
 
-interface S3Location {
-  bucket: string;
-  key: string;
-  region?: string;
-}
-
-/**
- * Parse S3 URL into bucket and key
- * Supports the major hosted-style and path-style formats, including signed URLs
- */
-export function parseS3Url(url: string): S3Location | null {
-  if (!url) {
-    return null;
-  }
-
-  // s3://bucket/key format
-  const s3Match = url.match(/^s3:\/\/([^\/]+)\/(.+)$/i);
-  if (s3Match) {
-    const [, bucket, keyAndQuery] = s3Match;
-    if (bucket && keyAndQuery) {
-      const [keyWithoutQuery] = keyAndQuery.split('?');
-      if (!keyWithoutQuery) {
-        return null;
-      }
-      return {
-        bucket,
-        key: decodeURIComponent(keyWithoutQuery),
-      };
-    }
-    return null;
-  }
-
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-  } catch {
-    return null;
-  }
-
-  const { hostname, pathname } = parsedUrl;
-  const [cleanPathRaw] = pathname.replace(/^\/+/, '').split('?');
-  const cleanPath = cleanPathRaw ?? '';
-
-  // https://bucket.s3.region.amazonaws.com/key and https://bucket.s3.amazonaws.com/key
-  const virtualHostMatch = hostname.match(
-    /^(?<bucket>.+?)\.s3(?:(?:[.-](?<qualifier>accelerate|dualstack))?(?:[.-](?<region>[a-z0-9-]+))?)?\.amazonaws\.com$/i
-  );
-  if (virtualHostMatch && cleanPath) {
-    const bucket = virtualHostMatch.groups?.bucket;
-    if (bucket) {
-      const region = virtualHostMatch.groups?.region;
-      const location: S3Location = {
-        bucket,
-        key: decodeURIComponent(cleanPath),
-      };
-      if (region) {
-        location.region = region;
-      }
-      return location;
-    }
-  }
-
-  // https://bucket.s3.region.amazonaws.com/key format
-  const pathStyleMatch = hostname.match(/^s3[.-](?<region>[^.]+)\.amazonaws\.com$/i);
-  if (pathStyleMatch && cleanPath) {
-    const [bucket, ...keyParts] = cleanPath.split('/');
-    if (bucket && keyParts.length) {
-      const location: S3Location = {
-        bucket,
-        key: decodeURIComponent(keyParts.join('/')),
-      };
-      const region = pathStyleMatch.groups?.region;
-      if (region) {
-        location.region = region;
-      }
-      return location;
-    }
-  }
-
-  // https://s3.amazonaws.com/bucket/key
-  if (/^s3\.amazonaws\.com$/i.test(hostname) && cleanPath) {
-    const [bucket, ...keyParts] = cleanPath.split('/');
-    if (bucket && keyParts.length) {
-      return {
-        bucket,
-        key: decodeURIComponent(keyParts.join('/')),
-      };
-    }
-  }
-
-  return null;
-}
-
-/**
- * Check if a string is an S3 URL
- */
-export function isS3Url(path: string): boolean {
-  return parseS3Url(path) !== null;
-}
+export { parseS3Url, isS3Url } from './s3Url.js';
 
 /**
  * Download file from S3 to a temporary location
@@ -115,7 +19,7 @@ export function isS3Url(path: string): boolean {
  * @returns Path to downloaded temporary file
  */
 export async function downloadFromS3(s3Url: string, profile?: string): Promise<string> {
-  const location = parseS3Url(s3Url);
+  const location = parseS3UrlLite(s3Url);
   if (!location) {
     throw new Error(`Invalid S3 URL: ${s3Url}`);
   }
@@ -171,7 +75,7 @@ export async function generatePresignedUrl(
   expiresIn: number = 3600,
   profile?: string
 ): Promise<string> {
-  const location = parseS3Url(s3Url);
+  const location = parseS3UrlLite(s3Url);
   if (!location) {
     throw new Error(`Invalid S3 URL: ${s3Url}`);
   }

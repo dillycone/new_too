@@ -9,12 +9,12 @@ interface MenuProps {
 const menuOptions: MenuOption[] = [
   {
     id: 'transcribe',
-    label: 'Transcribe audio/video file',
+    label: '1. Transcribe audio/video file',
     emoji: '🎬',
   },
   {
     id: 'generateTutorial',
-    label: 'Generate tutorial from audio/video file',
+    label: '2. Generate tutorial from audio/video file',
     emoji: '📚',
   },
 ];

@@ -4,12 +4,10 @@ import { writeFileSync } from 'node:fs';
 import { basename, extname, resolve as resolvePath } from 'node:path';
 import { Menu } from './components/Menu.js';
 import { FileInput } from './components/FileInput.js';
-import { transcribe } from './commands/transcribe.js';
-import { generateTutorial } from './commands/generateTutorial.js';
 import type { WizardScreen, OperationType, ProcessingResult } from './types.js';
 import { subscribeToConsole } from './utils/consoleCapture.js';
 import { startStderrCapture } from './utils/stderrCapture.js';
-import { generatePresignedUrl, isS3Url } from './utils/s3.js';
+import { isS3Url } from './utils/s3Url.js';
 
 const isVerbose = /^(1|true|yes)$/i.test(String(process.env.VERBOSE ?? ''));
 const MAX_CONSOLE_LINES = isVerbose ? 10 : 4;
@@ -175,6 +173,7 @@ export const Wizard: React.FC = () => {
 
     try {
       if (selectedOption === 'transcribe') {
+        const { transcribe } = await import('./commands/transcribe.js');
         processResult = await transcribe(filePath, {
           onStatus: enqueueStatus,
           onProgressChunk: enqueueTranscriptChunk,
@@ -209,6 +208,7 @@ export const Wizard: React.FC = () => {
 
           if (isVerbose && isS3Url(filePath)) {
             try {
+              const { generatePresignedUrl } = await import('./utils/s3.js');
               const presignedUrl = await generatePresignedUrl(filePath);
               updatedResult = { ...updatedResult, presignedUrl };
               setConsoleMessages(prev => [
@@ -227,6 +227,7 @@ export const Wizard: React.FC = () => {
           processResult = updatedResult;
         }
       } else if (selectedOption === 'generateTutorial') {
+        const { generateTutorial } = await import('./commands/generateTutorial.js');
         processResult = await generateTutorial(filePath, {
           onStatus: enqueueStatus,
           onProgressChunk: enqueueTranscriptChunk,
@@ -261,6 +262,7 @@ export const Wizard: React.FC = () => {
 
           if (isVerbose && isS3Url(filePath)) {
             try {
+              const { generatePresignedUrl } = await import('./utils/s3.js');
               const presignedUrl = await generatePresignedUrl(filePath);
               updatedResult = { ...updatedResult, presignedUrl };
               setConsoleMessages(prev => [

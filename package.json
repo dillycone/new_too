@@ -8,7 +8,7 @@
   },
   "type": "module",
   "scripts": {
-    "start": "node scripts/start.mjs",
+    "start": "node dist/index.js",
     "build": "tsc",
     "prepare": "npm run build",
     "dev": "node scripts/start.mjs"
