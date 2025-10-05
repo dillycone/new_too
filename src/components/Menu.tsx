@@ -17,6 +17,11 @@ const menuOptions: MenuOption[] = [
     label: '2. Generate tutorial from audio/video file',
     emoji: '📚',
   },
+  {
+    id: 'batchTranscribe',
+    label: '3. Batch transcribe multiple files',
+    emoji: '📦',
+  },
 ];
 
 export const Menu: React.FC<MenuProps> = ({ onSelect }) => {

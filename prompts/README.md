@@ -7,6 +7,9 @@ This directory contains prompt templates used by the media processing commands.
 ### `tutorial-generation.txt`
 Used by the `generateTutorial` command to create comprehensive tutorials from video/audio content.
 
+### `transcription.txt`
+Used by the `transcribe` command to control the default transcript formatting (timestamps, diarization, etc.).
+
 **Features:**
 - Overview and learning objectives
 - Timestamped key topics

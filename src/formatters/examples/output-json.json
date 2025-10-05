@@ -1,0 +1,53 @@
+{
+  "metadata": {
+    "durationMs": 42000,
+    "speakers": [
+      "Speaker 1",
+      "Speaker 2"
+    ],
+    "createdAt": "2025-10-05T00:00:00.000Z",
+    "source": "podcast-episode.mp3"
+  },
+  "segments": [
+    {
+      "index": 0,
+      "startMs": 5000,
+      "endMs": 12000,
+      "startTime": "00:00:05.000",
+      "endTime": "00:00:12.000",
+      "duration": 7000,
+      "speaker": "Speaker 1",
+      "text": "Welcome to today's podcast. We're going to discuss the future of artificial intelligence."
+    },
+    {
+      "index": 1,
+      "startMs": 12000,
+      "endMs": 18000,
+      "startTime": "00:00:12.000",
+      "endTime": "00:00:18.000",
+      "duration": 6000,
+      "speaker": "Speaker 2",
+      "text": "Thanks for having me. I'm excited to talk about this topic."
+    },
+    {
+      "index": 2,
+      "startMs": 18000,
+      "endMs": 28000,
+      "startTime": "00:00:18.000",
+      "endTime": "00:00:28.000",
+      "duration": 10000,
+      "speaker": "Speaker 1",
+      "text": "Let's start with the basics. What do you think is the most important development in AI recently?"
+    },
+    {
+      "index": 3,
+      "startMs": 28000,
+      "endMs": 42000,
+      "startTime": "00:00:28.000",
+      "endTime": "00:00:42.000",
+      "duration": 14000,
+      "speaker": "Speaker 2",
+      "text": "I'd say the advancement in large language models has been transformative. They can understand context and generate human-like responses."
+    }
+  ]
+}

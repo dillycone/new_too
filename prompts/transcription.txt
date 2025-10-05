@@ -1,0 +1,4 @@
+Transcribe the audio verbatim.
+- Include timestamps at least every sentence as [hh:mm:ss].
+- Diarize speakers as "Speaker 1:", "Speaker 2:" (infer new speaker on voice change).
+- Do NOT summarize.

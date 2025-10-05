@@ -1,0 +1,24 @@
+1
+00:00:05,000 --> 00:00:12,000
+Speaker 1: Welcome to today's podcast.
+We're going to discuss the future of
+artificial intelligence.
+
+2
+00:00:12,000 --> 00:00:18,000
+Speaker 2: Thanks for having me. I'm
+excited to talk about this topic.
+
+3
+00:00:18,000 --> 00:00:28,000
+Speaker 1: Let's start with the basics.
+What do you think is the most
+important development in AI recently?
+
+4
+00:00:28,000 --> 00:00:42,000
+Speaker 2: I'd say the advancement in
+large language models has been
+transformative. They can understand
+context and generate human-like
+responses.

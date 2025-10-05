@@ -1,7 +1,7 @@
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { fromIni } from '@aws-sdk/credential-providers';
-import { createWriteStream, unlinkSync, promises as fsPromises } from 'fs';
+import { createWriteStream, unlinkSync, promises as fsPromises, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { basename, join } from 'path';
 import { randomBytes } from 'crypto';
@@ -9,21 +9,92 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import type { S3Location } from './s3Url.js';
 import { parseS3Url as parseS3UrlLite } from './s3Url.js';
+import { getConfig } from '../config/index.js';
+import { getS3Cache } from './s3Cache/index.js';
+import type { S3DownloadOptions } from './s3Cache/types.js';
 
 export { parseS3Url, isS3Url } from './s3Url.js';
 
 /**
- * Download file from S3 to a temporary location
+ * Download file from S3 to a temporary location with caching support
  * @param s3Url - S3 URL (s3:// or https://)
- * @param profile - Optional AWS profile name; when omitted the default credential chain is used
+ * @param options - Download options including profile, skipCache, and validateETag
  * @returns Path to downloaded temporary file
  */
-export async function downloadFromS3(s3Url: string, profile?: string): Promise<string> {
+export async function downloadFromS3(
+  s3Url: string,
+  options?: string | S3DownloadOptions
+): Promise<string> {
+  // Support backward compatibility with profile string parameter
+  const downloadOptions: S3DownloadOptions = typeof options === 'string'
+    ? { profile: options }
+    : (options || {});
+
+  const { profile, skipCache = false, validateETag = true } = downloadOptions;
+
   const location = parseS3UrlLite(s3Url);
   if (!location) {
     throw new Error(`Invalid S3 URL: ${s3Url}`);
   }
 
+  const config = getConfig();
+
+  // Try to get from cache if enabled and not skipping cache
+  if (!skipCache && config.cache.enabled) {
+    try {
+      const cache = await getS3Cache({
+        enabled: config.cache.enabled,
+        maxSize: config.cache.maxSizeMb * 1024 * 1024, // Convert MB to bytes
+        maxEntries: config.cache.maxEntries,
+        ttl: config.cache.ttlHours * 60 * 60 * 1000, // Convert hours to milliseconds
+      });
+
+      // Check cache first
+      const cachedEntry = await cache.get(s3Url, profile);
+
+      if (cachedEntry) {
+        // Validate ETag if requested
+        if (validateETag && cachedEntry.etag) {
+          try {
+            const s3Client = createS3Client(location, profile);
+            const headCommand = new GetObjectCommand({
+              Bucket: location.bucket,
+              Key: location.key,
+            });
+            const headResponse = await s3Client.send(headCommand);
+
+            // If ETag matches, use cached file
+            if (headResponse.ETag === cachedEntry.etag) {
+              // Copy cached file to temp location for consistency
+              const keyName = location.key ? basename(location.key) : 'file';
+              const tempFileName = `s3-cached-${randomBytes(8).toString('hex')}-${keyName}`;
+              const tempFilePath = join(tmpdir(), tempFileName);
+
+              await fsPromises.copyFile(cachedEntry.filePath, tempFilePath);
+              return tempFilePath;
+            }
+          } catch {
+            // If validation fails, continue with fresh download
+          }
+        } else {
+          // No ETag validation requested, use cached file directly
+          const keyName = location.key ? basename(location.key) : 'file';
+          const tempFileName = `s3-cached-${randomBytes(8).toString('hex')}-${keyName}`;
+          const tempFilePath = join(tmpdir(), tempFileName);
+
+          await fsPromises.copyFile(cachedEntry.filePath, tempFilePath);
+          return tempFilePath;
+        }
+      }
+    } catch (error) {
+      // If cache fails, continue with regular download
+      if (config.app.verbose) {
+        console.error('Cache lookup failed, continuing with download:', error);
+      }
+    }
+  }
+
+  // Download from S3
   const s3Client = createS3Client(location, profile);
 
   const command = new GetObjectCommand({
@@ -58,6 +129,25 @@ export async function downloadFromS3(s3Url: string, profile?: string): Promise<s
     await fsPromises.writeFile(tempFilePath, Buffer.from(bodyStream));
   } else {
     throw new Error('Unsupported S3 response body type for download');
+  }
+
+  // Store in cache if enabled and not skipping cache
+  if (!skipCache && config.cache.enabled) {
+    try {
+      const cache = await getS3Cache({
+        enabled: config.cache.enabled,
+        maxSize: config.cache.maxSizeMb * 1024 * 1024,
+        maxEntries: config.cache.maxEntries,
+        ttl: config.cache.ttlHours * 60 * 60 * 1000,
+      });
+
+      await cache.set(s3Url, tempFilePath, profile, response.ETag);
+    } catch (error) {
+      // If caching fails, continue without caching
+      if (config.app.verbose) {
+        console.error('Failed to cache download:', error);
+      }
+    }
   }
 
   return tempFilePath;
@@ -103,15 +193,18 @@ export function cleanupTempFile(filePath: string): void {
 }
 
 function createS3Client(location: S3Location, profile?: string): S3Client {
-  const region = location.region || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+  const config = getConfig();
+  const region = location.region || config.aws.region;
+  const actualProfile = profile || config.aws.profile;
+
   const baseConfig = {
     region,
   };
 
-  if (profile) {
+  if (actualProfile) {
     return new S3Client({
       ...baseConfig,
-      credentials: fromIni({ profile }),
+      credentials: fromIni({ profile: actualProfile }),
     });
   }
 
